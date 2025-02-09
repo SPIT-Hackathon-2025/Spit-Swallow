@@ -8,6 +8,7 @@ import {
   Modal,
   TextInput,
   ScrollView,
+  Alert,
 } from "react-native";
 import * as Linking from "expo-linking";
 import * as Location from "expo-location";
@@ -42,6 +43,45 @@ const AdventurePlanner: React.FC = () => {
   const [chatMessages, setChatMessages] = useState<{ id: number; text: string; sender: "user" | "bot" }[]>([]);
   const [messageInput, setMessageInput] = useState("");
   const scrollViewRef = useRef<ScrollView>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [sortedSpots, setSortedSpots] = useState<Spot[]>(spots);
+  useEffect(() => {
+    getUserLocation();
+  }, []);
+
+  const getUserLocation = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission Denied", "Location access is required to sort by distance.");
+      return;
+    }
+    const location = await Location.getCurrentPositionAsync({});
+    setUserLocation({ latitude: location.coords.latitude, longitude: location.coords.longitude });
+  };
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const toRad = (deg: number) => (deg * Math.PI) / 180;
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  const sortSpots = (criteria: "popularity" | "distance") => {
+    if (criteria === "popularity") {
+      setSortedSpots([...spots].sort((a, b) => b.popularity - a.popularity));
+    } else if (criteria === "distance" && userLocation) {
+      const updatedSpots = spots.map(spot => ({
+        ...spot,
+        distance: calculateDistance(userLocation.latitude, userLocation.longitude, spot.latitude, spot.longitude),
+      }));
+      setSortedSpots([...updatedSpots].sort((a, b) => (a.distance || 0) - (b.distance || 0)));
+    }
+  };
 
   const getResponseFromAI = async (question: string) => {
     try {
@@ -77,22 +117,32 @@ const AdventurePlanner: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      
+      <View style={styles.sortButtonsContainer}>
+        <TouchableOpacity style={styles.sortButton} onPress={() => sortSpots("popularity")}>
+          <Text style={styles.sortButtonText}>Sort by Popularity</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.sortButton} onPress={() => sortSpots("distance")}>
+          <Text style={styles.sortButtonText}>Sort by Distance</Text>
+        </TouchableOpacity>
+      </View>
+
+
       <FlatList
-        data={spots}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.cardTextContainer}>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.description}>{item.description}</Text>
-            </View>
-            <TouchableOpacity onPress={() => openDirections(item.latitude, item.longitude)}>
-              <Icon name="map" size={30} color="blue" style={styles.mapIcon} />
-            </TouchableOpacity>
-          </View>
-        )}
-      />
+  data={sortedSpots}
+  keyExtractor={(item) => item.id.toString()}
+  renderItem={({ item }) => (
+    <View style={styles.card}>
+      <View style={styles.cardTextContainer}>
+        <Text style={styles.name}>{item.name}</Text>
+        <Text style={styles.description}>{item.description}</Text>
+      </View>
+      <TouchableOpacity onPress={() => openDirections(item.latitude, item.longitude)} style={styles.mapButton}>
+        <Icon name="map" size={30} color="blue" />
+      </TouchableOpacity>
+    </View>
+  )}
+/>
+
 
       <TouchableOpacity style={styles.chatbotButton} onPress={() => setChatbotVisible(true)}>
         <Icon name="comment" size={30} color="white" />
@@ -148,7 +198,15 @@ const styles = StyleSheet.create({
   sendButton: { backgroundColor: "#007AFF", padding: 10, borderRadius: 8 },
   sendButtonText: { color: "white" },
   closeButton: { backgroundColor: "red", padding: 10, marginTop: 10, borderRadius: 8, alignItems: "center" },
-  closeButtonText: { color: "white", fontWeight: "bold" }
+  closeButtonText: { color: "white", fontWeight: "bold" },
+  sortButtonsContainer: { flexDirection: "row", justifyContent: "space-between", marginBottom: 10 },
+  sortButton: { backgroundColor: "#007AFF", padding: 10, borderRadius: 5 },
+  sortButtonText: { color: "white", fontWeight: "bold" },
+  mapButton: {
+    padding: 10,
+    borderRadius: 50,
+    backgroundColor: "#f0f0f0",
+  },
 });
 
 export default AdventurePlanner;

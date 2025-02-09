@@ -31,7 +31,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <View style={styles.header}>
-        <Text style={styles.appName}>MyApp</Text>
+        <Text style={styles.appName}>PokeQuest</Text>
         <Link href="/profile" asChild>
           <TouchableOpacity>
             <Ionicons name="person-circle-outline" size={28} color="white" />

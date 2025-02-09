@@ -6,10 +6,10 @@ import * as ImagePicker from 'expo-image-picker';
 const ProfileScreen = () => {
   // Sample user data
   const [user, setUser] = useState({
-    name: "John Doe",
-    email: "johndoe@example.com",
+    name: "Krrish Nichanii",
+    email: "krrish@gmail.com",
     profileImage: "https://randomuser.me/api/portraits/men/1.jpg",
-    stardust: 500,
+    stardust: 25,
     badges: 4,
     adventureLevel: 10,
     nextLevelXp: 750,
@@ -56,6 +56,7 @@ const ProfileScreen = () => {
       {/* Profile Section */}
       <View style={styles.profileContainer}>
         <Image source={{ uri: user.profileImage }} style={styles.profileImage} />
+        <Text style={styles.verifiedTag}>✔ Verified</Text>
         <View style={styles.userInfo}>
           <Text style={styles.name}>{user.name}</Text>
           <Text style={styles.email}>{user.email}</Text>
@@ -137,6 +138,18 @@ const styles = StyleSheet.create({
     elevation: 5,
     marginBottom: 20,
     position: "relative",
+  },
+  verifiedTag: {
+    position: "absolute",
+    bottom: 30,
+    left: 40,
+    backgroundColor: "green",
+    color: "white",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 5,
+    fontSize: 12,
+    fontWeight: "bold",
   },
   profileImage: { width: 100, height: 100, borderRadius: 50, marginRight: 20, },
   userInfo: { flex: 1 },

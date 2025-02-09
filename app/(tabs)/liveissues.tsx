@@ -47,14 +47,14 @@ const LiveIssues: React.FC = () => {
     tags: [] as string[],
     criticality: "",
   });
+  const formData = new FormData();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await axios.get(`${API_URL}/post`);
         setIssues(response.data.data);
-        // console.log(response.data.data[0]);
-        // console.log(response.data.data[0].media.secure_url);
+        // console.log(response.data.data);
       } catch (err) {
         setError("Failed to fetch issues.");
       } finally {
@@ -72,6 +72,7 @@ const LiveIssues: React.FC = () => {
 
     if (!result.canceled) {
       setCapturedImage(result.assets[0].uri);
+      
     }
   };
 
@@ -88,7 +89,11 @@ const LiveIssues: React.FC = () => {
         Alert.alert("Error", "User not found. Please log in again.");
         return;
       }
-
+      // formData.append("title", newPost.title);
+      // formData.append("content", newPost.content);
+      // if(newPost.tags.length > 0 ) formData.append("tags", newPost.tags[0]);
+      // else formData.append("tags", "");
+      // formData.append("userId", userId);
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         Alert.alert("Error", "Location permission denied.");
@@ -98,27 +103,32 @@ const LiveIssues: React.FC = () => {
       const location = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = location.coords;
 
-      const postData = new FormData();
-      postData.append("title", newPost.title);
-      postData.append("content", newPost.content);
-      postData.append("tags", JSON.stringify(newPost.tags));
-      postData.append("criticality", newPost.criticality);
-      postData.append("userId", userId);
-      postData.append("latitude", latitude.toString());
-      postData.append("longitude", longitude.toString());
+      // const postData = new FormData();
+      formData.append("title", newPost.title);
+      formData.append("content", newPost.content);
+      formData.append("tags", JSON.stringify(newPost.tags));
+      formData.append("criticality", newPost.criticality);
+      formData.append("userId", userId);
+      formData.append("community", "Test");
+      // formData.append("latitude", latitude);
+      // formData.append("longitude", longitude);
 
-      if (capturedImage) {
-        postData.append("image", {
-          uri: capturedImage,
-          type: "image/jpeg",
-          name: "image.jpg",
-        } as any);
-      }
+      // if (capturedImage) {
+      //   const resource = await fetch(capturedImage);
+      //   formData.append("media", {
+      //     uri: file.uri,
+      //     name: file.fileName || "image.jpg",
+      //     type: file.mimeType || "image/jpeg",
+      //   });
+      // }
+      // console.log(formData);
+      
 
-      const response = await axios.post(`${API_URL}/post/create`, postData, {
+      const response = await axios.post(`${API_URL}/post/create`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-
+      console.log(response);
+      
       setIssues([response.data, ...issues]);
       setModalVisible(false);
       setNewPost({ title: "", content: "", tags: [], criticality: "" });
@@ -131,27 +141,38 @@ const LiveIssues: React.FC = () => {
     }
   };
 
-
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Live Issues</Text>
       <FlatList
         data={issues}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.card} onPress={() => setSelectedPost(item)}>
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => setSelectedPost(item)}
+          >
             <View style={styles.header}>
               <Text style={styles.username}>@{item.username}</Text>
               <Text style={styles.tags}>{item.tags.join(", ")}</Text>
             </View>
             <Text style={styles.issueTitle}>{item.title}</Text>
-            <Text style={styles.issueText} numberOfLines={2}>{item.content}</Text>
+            <Text style={styles.issueText} numberOfLines={2}>
+              {item.content}
+            </Text>
           </TouchableOpacity>
         )}
       />
-      {selectedPost && <PostDetails post={selectedPost} onClose={() => setSelectedPost(null)} />}
-      
-      <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
+      {selectedPost && (
+        <PostDetails
+          post={selectedPost}
+          onClose={() => setSelectedPost(null)}
+        />
+      )}
+
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => setModalVisible(true)}
+      >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
 
@@ -159,22 +180,51 @@ const LiveIssues: React.FC = () => {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Add New Issue</Text>
-            <TextInput placeholder="Title" style={styles.input} value={newPost.title} onChangeText={(text) => setNewPost({ ...newPost, title: text })} />
-            <TextInput placeholder="Description" style={styles.input} value={newPost.content} onChangeText={(text) => setNewPost({ ...newPost, content: text })} />
-            <TextInput placeholder="Criticality" style={styles.input} value={newPost.criticality} onChangeText={(text) => setNewPost({ ...newPost, criticality: text })} />
-            <TextInput placeholder="Tags (Comma Separated)" style={styles.input} value={newPost.tags.join(", ")} onChangeText={(text) => setNewPost({ ...newPost, tags: text.split(", ") })} />
+            <TextInput
+              placeholder="Title"
+              style={styles.input}
+              value={newPost.title}
+              onChangeText={(text) => setNewPost({ ...newPost, title: text })}
+            />
+            <TextInput
+              placeholder="Description"
+              style={styles.input}
+              value={newPost.content}
+              onChangeText={(text) => setNewPost({ ...newPost, content: text })}
+            />
+            <TextInput
+              placeholder="Criticality"
+              style={styles.input}
+              value={newPost.criticality}
+              onChangeText={(text) =>
+                setNewPost({ ...newPost, criticality: text })
+              }
+            />
+            <TextInput
+              placeholder="Tags (Comma Separated)"
+              style={styles.input}
+              value={newPost.tags.join(", ")}
+              onChangeText={(text) =>
+                setNewPost({ ...newPost, tags: text.split(", ") })
+              }
+            />
 
             <TouchableOpacity onPress={openCamera} style={styles.button}>
               <Text style={styles.buttonText}>Capture Image</Text>
             </TouchableOpacity>
 
-            {capturedImage && <Image source={{ uri: capturedImage }} style={styles.image} />}
-            
+            {capturedImage && (
+              <Image source={{ uri: capturedImage }} style={styles.image} />
+            )}
+
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.button} onPress={addPost}>
                 <Text style={styles.buttonText}>Post</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.buttonCancel} onPress={() => setModalVisible(false)}>
+              <TouchableOpacity
+                style={styles.buttonCancel}
+                onPress={() => setModalVisible(false)}
+              >
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
             </View>
@@ -185,30 +235,75 @@ const LiveIssues: React.FC = () => {
   );
 };
 
-
-
 export default LiveIssues;
-
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#f8f8f8" },
   title: { fontSize: 24, fontWeight: "bold", marginBottom: 10 },
-  card: { padding: 15, marginBottom: 10, backgroundColor: "#fff", borderRadius: 8, elevation: 3 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 5 },
+  card: {
+    padding: 15,
+    marginBottom: 10,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    elevation: 3,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 5,
+  },
   username: { fontSize: 14, fontWeight: "bold", color: "#555" },
-  tags: { fontSize: 12, backgroundColor: "#007AFF", color: "#fff", paddingVertical: 2, paddingHorizontal: 8, borderRadius: 10 },
+  tags: {
+    fontSize: 12,
+    backgroundColor: "#007AFF",
+    color: "#fff",
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+  },
   issueTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 5 },
   issueText: { fontSize: 14, color: "#333" },
-  fab: { position: "absolute", bottom: 20, right: 20, backgroundColor: "#007AFF", width: 50, height: 50, borderRadius: 25, justifyContent: "center", alignItems: "center", elevation: 5 },
+  fab: {
+    position: "absolute",
+    bottom: 20,
+    right: 20,
+    backgroundColor: "#007AFF",
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+  },
   fabText: { color: "#fff", fontSize: 24, fontWeight: "bold" },
-  modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.5)" },
-  modalContent: { width: "80%", padding: 20, backgroundColor: "#fff", borderRadius: 8, elevation: 5 },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContent: {
+    width: "80%",
+    padding: 20,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    elevation: 5,
+  },
   modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
-  input: { borderBottomWidth: 1, borderColor: "#ccc", padding: 8, marginBottom: 10 },
-  modalActions: { flexDirection: "row", justifyContent: "space-between", marginTop: 10 },
+  input: {
+    borderBottomWidth: 1,
+    borderColor: "#ccc",
+    padding: 8,
+    marginBottom: 10,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10,
+  },
   button: { backgroundColor: "#007AFF", padding: 10, borderRadius: 5 },
   buttonCancel: { backgroundColor: "#ccc", padding: 10, borderRadius: 5 },
   buttonText: { color: "#fff", fontWeight: "bold" },
   image: { width: 200, height: 200, borderRadius: 10, marginTop: 20 },
 });
-
